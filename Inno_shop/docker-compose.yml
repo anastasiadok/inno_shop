@@ -1,0 +1,26 @@
+version: '3.4'
+
+services:
+  productservice:
+    image: ${DOCKER_REGISTRY-}productservice
+    build:
+      context: .
+      dockerfile: ProductService/Dockerfile
+    environment:
+      MODE: container
+    depends_on:
+     - productdb
+
+  productdb:
+    image: postgres:16.1  
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: products
+    ports:
+     - "5432:5432"
+    volumes:
+     - postgres-data:/var/lib/postgresql/data
+volumes:
+  postgres-data:
