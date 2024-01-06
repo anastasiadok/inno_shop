@@ -1,28 +1,28 @@
 ﻿using Mapster;
 using MediatR;
 using ProductService.Domain.Entities;
+using ProductService.Domain.Exceptions;
 using ProductService.Infrastructure.Data;
 
-namespace ProductService.Application.ProductFeatures.Commands.AddProduct;
+namespace ProductService.Application.ProductFeatures.Commands.CreateProduct;
 
-public class CreateProductHandler : BaseHandler, IRequestHandler<CreateProductCommand, bool>
+public class CreateProductHandler : BaseHandler, IRequestHandler<CreateProductCommand>
 {
     public CreateProductHandler(ProductDbContext context) : base(context) { }
 
-    public async Task<bool> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    public async Task Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            var product = request.ProductDto.Adapt<Product>();
-            product.Id = Guid.NewGuid();
-            product.CreationDate = DateTime.UtcNow;
+        if (cancellationToken.IsCancellationRequested)
+            return;
 
-            await _context.Products.AddAsync(product);
-            await _context.SaveChangesAsync();
+        if (request.UserId != request.ProductDto.CreatorId)
+            throw new UserAccessException();
 
-            return true;
-        }
+        var product = request.ProductDto.Adapt<Product>();
+        product.Id = Guid.NewGuid();
+        product.CreationDate = DateTime.UtcNow;
 
-        return false;
+        await _context.Products.AddAsync(product);
+        await _context.SaveChangesAsync();
     }
 }

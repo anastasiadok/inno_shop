@@ -1,27 +1,26 @@
 ﻿using MediatR;
+using ProductService.Domain.Entities;
 using ProductService.Domain.Exceptions;
 using ProductService.Infrastructure.Data;
 
 namespace ProductService.Application.ProductFeatures.Commands.DeleteProduct;
 
-public class DeleteProductHandler : BaseHandler, IRequestHandler<DeleteProductCommand, bool>
+public class DeleteProductHandler : BaseHandler, IRequestHandler<DeleteProductCommand>
 {
     public DeleteProductHandler(ProductDbContext context) : base(context) { }
 
-    public async Task<bool> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
+    public async Task Handle(DeleteProductCommand request, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            var product = await _context.Products.FindAsync(request.ProductId);
-            if (product is null)
-                throw new NotFoundException("Product");
+        if (cancellationToken.IsCancellationRequested)
+            return;
 
-            _context.Remove(product);
-            _context.SaveChanges();
+        var product = await _context.Products.FindAsync(request.ProductId) 
+            ?? throw new NotFoundException(nameof(Product));
 
-            return true;
-        }
+        if (request.UserId != product.CreatorId)
+            throw new UserAccessException();
 
-        return false;
+        _context.Remove(product);
+        await _context.SaveChangesAsync();
     }
 }

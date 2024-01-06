@@ -11,11 +11,6 @@ public class GetAllProductsHandler : BaseHandler, IRequestHandler<GetAllProducts
 
     public async Task<IEnumerable<Product>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            return await _context.Products.AsNoTracking().ToListAsync();
-        }
-
-        return null;
+        return await _context.Products.AsNoTracking().ToListAsync(cancellationToken);
     }
 }

@@ -6,13 +6,10 @@
     <DockerPublishLocally>False</DockerPublishLocally>
     <ProjectGuid>8e2474a7-ff47-439a-9b1f-b92534c96545</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
+    <DockerServiceUrl>{Scheme}://{ServiceHost}:{ServicePort}/swagger</DockerServiceUrl>
     <DockerServiceName>productservice</DockerServiceName>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="docker-compose.override.yml">
-      <DependentUpon>docker-compose.yml</DependentUpon>
-    </None>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
   </ItemGroup>

@@ -5,7 +5,9 @@
       "commandVersion": "1.0",
       "serviceActions": {
         "productservice": "StartWithoutDebugging",
-        "productdb": "StartWithoutDebugging"
+        "productdb": "StartWithoutDebugging",
+        "userdb": "StartWithoutDebugging",
+        "userservice": "StartWithoutDebugging"
       }
     }
   }

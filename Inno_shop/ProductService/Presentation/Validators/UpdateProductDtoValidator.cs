@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using ProductService.Application.Dtos;
 
-namespace ProductService.Application.ProductFeatures.Commands.UpdateProduct;
+namespace ProductService.Presentation.Validators;
 
 public class UpdateProductDtoValidator : AbstractValidator<UpdateProductDto>
 {

@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using ProductService.Application.Dtos;
 
-namespace ProductService.Application.ProductFeatures.Commands.AddProduct;
+namespace ProductService.Application.ProductFeatures.Commands.CreateProduct;
 
-public record CreateProductCommand(CreateProductDto ProductDto) : IRequest<bool>;
+public record CreateProductCommand(CreateProductDto ProductDto, Guid UserId) : IRequest;

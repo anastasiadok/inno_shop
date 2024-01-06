@@ -1,32 +1,27 @@
-﻿using MediatR;
+﻿using Mapster;
+using MediatR;
+using ProductService.Domain.Entities;
 using ProductService.Domain.Exceptions;
 using ProductService.Infrastructure.Data;
 
 namespace ProductService.Application.ProductFeatures.Commands.UpdateProduct;
 
-public class UpdateProductHandler : BaseHandler, IRequestHandler<UpdateProductCommand, bool>
+public class UpdateProductHandler : BaseHandler, IRequestHandler<UpdateProductCommand>
 {
     public UpdateProductHandler(ProductDbContext context) : base(context) { }
 
-    public async Task<bool> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
+    public async Task Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            var product = await _context.Products.FindAsync(request.ProductDto.Id);
+        if (cancellationToken.IsCancellationRequested)
+            return;
 
-            if (product is null)
-                throw new NotFoundException("Product");
+        var product = await _context.Products.FindAsync(request.ProductDto.Id) 
+            ?? throw new NotFoundException(nameof(Product));
 
-            product.Description = request.ProductDto.Description;
-            product.Price = request.ProductDto.Price;
-            product.Name = request.ProductDto.Name;
-            product.IsAvailible = request.ProductDto.IsAvailible;
+        if (request.UserId != product.CreatorId)
+            throw new UserAccessException();
 
-            await _context.SaveChangesAsync();
-
-            return true;
-        }
-
-        return false;
+        request.ProductDto.Adapt(product);
+        await _context.SaveChangesAsync();
     }
 }

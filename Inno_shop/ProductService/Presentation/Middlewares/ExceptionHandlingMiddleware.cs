@@ -1,5 +1,5 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using ProductService.Domain.Exceptions;
 namespace ProductService.Presentation.Middlewares;
 
@@ -7,9 +7,12 @@ public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next)
+    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+
+    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -20,6 +23,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex.Message);
             await HandleExceptionMessageAsync(context, ex);
         }
     }
@@ -27,19 +31,17 @@ public class ExceptionHandlingMiddleware
     private static Task HandleExceptionMessageAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
-        int statusCode = (int)HttpStatusCode.InternalServerError;
-
-        switch (exception)
+        int statusCode = exception switch
         {
-            case NotFoundException:
-                statusCode = (int)HttpStatusCode.NotFound;
-                break;
-        }
+            NotFoundException => StatusCodes.Status404NotFound,
+            UserAccessException=> StatusCodes.Status401Unauthorized,
+            _ => StatusCodes.Status500InternalServerError
+        };
 
-        var result = JsonSerializer.Serialize(new
+        var result = JsonSerializer.Serialize(new ProblemDetails
         {
-            StatusCode = statusCode,
-            ErrorMessage = exception.Message,
+            Status = statusCode,
+            Detail = exception.Message
         });
 
         context.Response.StatusCode = statusCode;

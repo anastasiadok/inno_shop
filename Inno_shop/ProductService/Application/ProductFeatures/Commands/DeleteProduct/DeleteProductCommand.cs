@@ -2,4 +2,4 @@
 
 namespace ProductService.Application.ProductFeatures.Commands.DeleteProduct;
 
-public record DeleteProductCommand(Guid ProductId) : IRequest<bool>;
+public record DeleteProductCommand(Guid ProductId, Guid UserId) : IRequest;

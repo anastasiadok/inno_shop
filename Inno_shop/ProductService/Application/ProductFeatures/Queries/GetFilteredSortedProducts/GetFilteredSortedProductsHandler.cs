@@ -9,20 +9,18 @@ namespace ProductService.Application.ProductFeatures.Queries.GetFilteredSortedPr
 public class GetFilteredSortedProductsHandler : BaseHandler, IRequestHandler<GetFilteredSortedProductsQuery, IEnumerable<Product>>
 {
     private readonly SieveProcessor _sieveProcessor;
-    public GetFilteredSortedProductsHandler(ProductDbContext context, SieveProcessor sieveProcessor) : base(context) 
+    public GetFilteredSortedProductsHandler(ProductDbContext context, SieveProcessor sieveProcessor) : base(context)
     {
         _sieveProcessor = sieveProcessor;
     }
 
     public async Task<IEnumerable<Product>> Handle(GetFilteredSortedProductsQuery request, CancellationToken cancellationToken)
     {
-        if (!cancellationToken.IsCancellationRequested)
-        {
-            var products = _context.Products.AsNoTracking();
-            products = _sieveProcessor.Apply(request.SieveModel, products);
-            return await products.ToListAsync();
-        }
-       
-        return null;
+        if (cancellationToken.IsCancellationRequested)
+            return Enumerable.Empty<Product>();
+
+        var products = _context.Products.AsNoTracking();
+        products = _sieveProcessor.Apply(request.SieveModel, products);
+        return await products.ToListAsync();
     }
 }

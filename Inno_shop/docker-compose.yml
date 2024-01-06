@@ -7,7 +7,12 @@ services:
       context: .
       dockerfile: ProductService/Dockerfile
     environment:
-      MODE: container
+      - MODE=container
+      - ASPNETCORE_ENVIRONMENT=Development 
+      - ASPNETCORE_HTTP_PORTS=5000
+      - ASPNETCORE_URLS=http://+:5000
+    ports:
+     - "5000:5000"
     depends_on:
      - productdb
 
@@ -21,6 +26,33 @@ services:
     ports:
      - "5432:5432"
     volumes:
-     - postgres-data:/var/lib/postgresql/data
+     - product-data:/var/lib/postgresql/data
+
+  userservice:
+    image: ${DOCKER_REGISTRY-}userservice
+    build:
+      context: .
+      dockerfile: UserService/Dockerfile
+    environment:
+      - MODE=container
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5001:80"
+    depends_on:
+      - userdb
+
+  userdb:
+    image: postgres:16.1  
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+    ports:
+      - "5433:5432"
+    volumes:
+      - user-data:/var/lib/postgresql/data
+
 volumes:
-  postgres-data:
+  product-data:
+  user-data:  

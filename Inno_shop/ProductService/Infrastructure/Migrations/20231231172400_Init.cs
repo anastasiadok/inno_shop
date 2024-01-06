@@ -16,8 +16,8 @@ namespace ProductService.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Price = table.Column<decimal>(type: "numeric", nullable: false),
                     IsAvailible = table.Column<bool>(type: "boolean", nullable: false),
                     CreatorId = table.Column<Guid>(type: "uuid", nullable: false),

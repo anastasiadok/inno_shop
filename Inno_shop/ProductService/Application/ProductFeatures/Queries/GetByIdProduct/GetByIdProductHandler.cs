@@ -11,14 +11,8 @@ namespace ProductService.Application.ProductFeatures.Queries.GetByIdProduct
 
         public async Task<Product> Handle(GetByIdProductQuery request, CancellationToken cancellationToken)
         {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                var product = await _context.Products.FindAsync(request.Id);
-                if (product is null)
-                    throw new NotFoundException("Product");
-            }
-
-            return null;
+            return await _context.Products.FindAsync(new object?[] { request.Id }, cancellationToken)
+                ?? throw new NotFoundException(nameof(Product));
         }
     }
 }

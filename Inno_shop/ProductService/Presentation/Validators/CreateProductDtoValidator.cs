@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using ProductService.Application.Dtos;
 
-namespace ProductService.Application.ProductFeatures.Commands.AddProduct;
+namespace ProductService.Presentation.Validators;
 
 public class CreateProductDtoValidator : AbstractValidator<CreateProductDto>
 {
