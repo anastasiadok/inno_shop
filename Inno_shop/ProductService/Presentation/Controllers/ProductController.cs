@@ -50,7 +50,7 @@ public class ProductController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto product)
+    public async Task<IActionResult> CreateProduct(CreateProductDto product)
     {
         var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
         await _mediator.Send(new CreateProductCommand(product, userId));
@@ -70,16 +70,14 @@ public class ProductController : Controller
     {
         var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
         await _mediator.Send(new DeleteProductCommand(id, userId));
-         return Ok();
+        return Ok();
     }
 
-    [HttpDelete("user")]
-    public async Task<IActionResult> DeleteUserProducts([FromQuery] Guid userid)
+    [HttpDelete("user/{userid}")]
+    public async Task<IActionResult> DeleteUserProducts([FromRoute] Guid userid)
     {
-        if (userid != Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value))
-            return Unauthorized();
-
-        await _mediator.Send(new DeleteUserProductsCommand(userid));
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+        await _mediator.Send(new DeleteUserProductsCommand(userid, userId));
         return Ok();
     }
 }

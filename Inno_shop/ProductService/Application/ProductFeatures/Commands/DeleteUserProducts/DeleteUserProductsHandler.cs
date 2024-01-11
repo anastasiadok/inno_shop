@@ -1,22 +1,21 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
-using ProductService.Domain.Entities;
 using ProductService.Domain.Exceptions;
-using ProductService.Infrastructure.Data;
+using ProductService.Infrastructure.Interfaces;
 
 namespace ProductService.Application.ProductFeatures.Commands.DeleteUserProducts;
 
 public class DeleteUserProductsHandler : BaseHandler, IRequestHandler<DeleteUserProductsCommand>
 {
-    public DeleteUserProductsHandler(ProductDbContext context) : base(context) { }
+    public DeleteUserProductsHandler(IProductRepository repository) : base(repository) { }
 
     public async Task Handle(DeleteUserProductsCommand request, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
-            return;
+            throw new TaskCanceledException();
 
-        var products = await _context.Products.Where(p => p.CreatorId == request.UserId).ToListAsync();
-        _context.RemoveRange(products);
-        await _context.SaveChangesAsync();
+        if (request.RequestUserId != request.AuthUserId)
+            throw new UserAccessException();
+
+        await _repository.DeleteUserProductsAsync(request.RequestUserId);
     }
 }

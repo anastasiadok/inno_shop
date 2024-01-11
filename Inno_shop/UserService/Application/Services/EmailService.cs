@@ -2,7 +2,7 @@
 using MimeKit;
 using UserService.Application.Interfaces;
 using UserService.Domain.Exceptions;
-using UserService.Domain.Models;
+using UserService.Domain.Entities;
 using UserService.Infrastructure.Interfaces;
 
 namespace UserService.Application.Services;
@@ -10,6 +10,7 @@ namespace UserService.Application.Services;
 public class EmailService : IEmailService
 {
     private readonly IUserRepository _repository;
+
     private readonly IConfiguration _config;
 
     public EmailService(IUserRepository repository, IConfiguration configuration)
@@ -61,21 +62,15 @@ public class EmailService : IEmailService
         }
     }
 
-    public async Task<bool> CheckEmailIsFree(string email)
-    {
-        var emailUser = await _repository.GetByEmailAsync(email);
-        return emailUser is null;
-    }
-
     public async Task ConfirmEmailByToken(string email, string token)
     {
         var user = await _repository.GetByEmailAsync(email) ?? throw new NotFoundException(nameof(User));
 
         if (user.IsEmailConfirmed)
-            throw new BadRequestException("Email is already confirmed");
+            throw new BadRequestException("Email is already confirmed.");
        
         if (user.EmailConfirmToken != token)
-            throw new BadRequestException("Invalid token");
+            throw new BadRequestException("Invalid token.");
 
         user.IsEmailConfirmed = true;
         await _repository.UpdateAsync(user);

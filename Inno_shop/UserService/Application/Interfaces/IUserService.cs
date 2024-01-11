@@ -6,8 +6,8 @@ public interface IUserService
 {
     Task<UserDto> GetById(Guid id);
     Task<UserDto> GetByEmail(string email);
-    IEnumerable<UserDto> GetAll();
+    Task<IEnumerable<UserDto>> GetAll();
+    Task Create(UserRegisterDto userDto);
     Task Update(UserUpdateDto userDto);
     Task DeleteById(Guid id);
-    Task DeleteUserProducts(Guid id, string userJwt);
 }

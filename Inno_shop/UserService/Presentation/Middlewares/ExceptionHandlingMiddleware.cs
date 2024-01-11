@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Net;
 using System.Text.Json;
 using UserService.Domain.Exceptions;
 namespace UserService.Presentation.Middlewares;

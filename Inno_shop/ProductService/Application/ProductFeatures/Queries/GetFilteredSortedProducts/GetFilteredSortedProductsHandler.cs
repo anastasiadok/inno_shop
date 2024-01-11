@@ -1,7 +1,6 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Entities;
-using ProductService.Infrastructure.Data;
+using ProductService.Infrastructure.Interfaces;
 using Sieve.Services;
 
 namespace ProductService.Application.ProductFeatures.Queries.GetFilteredSortedProducts;
@@ -9,18 +8,18 @@ namespace ProductService.Application.ProductFeatures.Queries.GetFilteredSortedPr
 public class GetFilteredSortedProductsHandler : BaseHandler, IRequestHandler<GetFilteredSortedProductsQuery, IEnumerable<Product>>
 {
     private readonly SieveProcessor _sieveProcessor;
-    public GetFilteredSortedProductsHandler(ProductDbContext context, SieveProcessor sieveProcessor) : base(context)
+    public GetFilteredSortedProductsHandler(IProductRepository repository, SieveProcessor sieveProcessor) : base(repository)
     {
         _sieveProcessor = sieveProcessor;
     }
 
-    public async Task<IEnumerable<Product>> Handle(GetFilteredSortedProductsQuery request, CancellationToken cancellationToken)
+    public Task<IEnumerable<Product>> Handle(GetFilteredSortedProductsQuery request, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
-            return Enumerable.Empty<Product>();
+            throw new TaskCanceledException();
 
-        var products = _context.Products.AsNoTracking();
-        products = _sieveProcessor.Apply(request.SieveModel, products);
-        return await products.ToListAsync();
+        var products = _repository.GetAllIQueryable();
+        var result = _sieveProcessor.Apply(request.SieveModel, products).ToList();
+        return Task.FromResult<IEnumerable<Product>>(result);
     }
 }

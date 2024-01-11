@@ -4,10 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProductService.Application.ProductFeatures.Queries.GetFilteredSortedProducts;
-using ProductService.Infrastructure.Data;
+using ProductService.Infrastructure.Contexts;
+using ProductService.Infrastructure.Interfaces;
+using ProductService.Infrastructure.Repositories;
 using ProductService.Presentation.Middlewares;
 using Sieve.Services;
-using System.Net;
 using System.Reflection;
 using System.Text;
 
@@ -52,6 +53,10 @@ public class Program
         });
         
         builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNamingPolicy = null;
+            })
             .AddFluentValidation(fv => fv.RegisterValidatorsFromAssembly(Assembly.GetExecutingAssembly()));
 
         var mode = Environment.GetEnvironmentVariable("MODE");
@@ -76,16 +81,9 @@ public class Program
             };
         });
 
-        if (mode == "container")
-        {
-            builder.WebHost.UseKestrel(opts =>
-            {
-                opts.ListenAnyIP(5000);
-            });
-        }
-
         builder.Services.AddCors();
 
+        builder.Services.AddScoped<IProductRepository, ProductRepository>();
         builder.Services.AddScoped<SieveProcessor, ApplicationSieveProcessor>();
 
         var app = builder.Build();

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using UserService.Domain.Models;
+using UserService.Domain.Entities;
+using UserService.Infrastructure.Contexts;
 using UserService.Infrastructure.Interfaces;
 
 namespace UserService.Infrastructure.Repositories;
@@ -21,12 +22,14 @@ public class UserRepository : IUserRepository
 
     public async Task DeleteByIdAsync(Guid id)
     {
-        await _context.Users.Where(u=>u.Id==id).ExecuteDeleteAsync();
+        var user = await _context.Users.FindAsync(id);
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
     }
 
-    public IEnumerable<User> GetAll()
+    public async Task<IEnumerable<User>> GetAllAsync()
     {
-        return _context.Users.AsEnumerable();
+        return await _context.Users.ToListAsync();
     }
 
     public async Task<User> GetByEmailAsync(string email)
@@ -43,5 +46,11 @@ public class UserRepository : IUserRepository
     {
         _context.Entry(user).State = EntityState.Modified;
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> CheckEmailIsFree(string email)
+    {
+        var emailUser = await GetByEmailAsync(email);
+        return emailUser is null;
     }
 }

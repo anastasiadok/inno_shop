@@ -30,7 +30,7 @@ public class AuthController : Controller
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginDto loginModel)
+    public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto loginModel)
     {
         var response = await _authService.Login(loginModel);
         return Ok(response);
@@ -49,11 +49,11 @@ public class AuthController : Controller
         var token = await _authService.ForgotPassword(email);
         var emailBodyUrl = Request.Scheme + "://" + Request.Host + Url.Action("resetpassword", "auth", new { email, token });
         await _emailService.SendResetPasswordEmail(email, emailBodyUrl);
-        return Ok("Check email. You may now reset your password whithin 1 hour.");
+        return Ok($"Check {email} email. You may now reset your password whithin 1 hour.");
     }
 
     [HttpGet("resetpassword")]
-    public ActionResult<ResetPasswordDto> ResetPassword(string email, string token)
+    public ActionResult<ResetPasswordDto> ResetPassword([EmailAddress] string email, string token)
     {
         var model = new ResetPasswordDto(email, "", token);
         return Ok(model);
@@ -63,6 +63,6 @@ public class AuthController : Controller
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
     {
         await _authService.ResetPassword(model);
-        return Ok("Password has been successfully changed");
+        return Ok("Password has been successfully changed.");
     }
 }

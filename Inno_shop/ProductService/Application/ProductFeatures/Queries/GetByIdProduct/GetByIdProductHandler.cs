@@ -1,17 +1,20 @@
 ﻿using MediatR;
 using ProductService.Domain.Entities;
 using ProductService.Domain.Exceptions;
-using ProductService.Infrastructure.Data;
+using ProductService.Infrastructure.Interfaces;
 
 namespace ProductService.Application.ProductFeatures.Queries.GetByIdProduct
 {
     public class GetByIdProductHandler : BaseHandler, IRequestHandler<GetByIdProductQuery, Product>
     {
-        public GetByIdProductHandler(ProductDbContext context) : base(context) { }
+        public GetByIdProductHandler(IProductRepository repository) : base(repository) { }
 
         public async Task<Product> Handle(GetByIdProductQuery request, CancellationToken cancellationToken)
         {
-            return await _context.Products.FindAsync(new object?[] { request.Id }, cancellationToken)
+            if(cancellationToken.IsCancellationRequested)
+                throw new TaskCanceledException();
+
+            return await _repository.GetByIdAsync(request.Id)
                 ?? throw new NotFoundException(nameof(Product));
         }
     }

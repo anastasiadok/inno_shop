@@ -2,27 +2,24 @@
 using UserService.Application.Dtos;
 using UserService.Application.Interfaces;
 using UserService.Domain.Exceptions;
-using UserService.Domain.Models;
+using UserService.Domain.Entities;
 using UserService.Infrastructure.Interfaces;
 
 namespace UserService.Application.Services;
 
-public class UserService:IUserService
+public class UserService : IUserService
 {
     private readonly IUserRepository _repository;
 
-    private readonly IHttpClientFactory _httpClientFactory;
-
-    public UserService(IUserRepository repository, IHttpClientFactory httpClientFactory) 
+    public UserService(IUserRepository repository)
     {
         _repository = repository;
-        _httpClientFactory = httpClientFactory;
     }
 
-    public IEnumerable<UserDto> GetAll()
+    public async Task<IEnumerable<UserDto>> GetAll()
     {
-        var users = _repository.GetAll();
-        return users.Adapt<IEnumerable<UserDto>>();
+        var users = await _repository.GetAllAsync();
+        return users.Adapt<List<UserDto>>();
     }
 
     public async Task<UserDto> GetByEmail(string email)
@@ -37,6 +34,22 @@ public class UserService:IUserService
         return user.Adapt<UserDto>();
     }
 
+    public async Task Create(UserRegisterDto userDto)
+    {
+        var emailUser = await _repository.GetByEmailAsync(userDto.Email);
+        if (emailUser is not null)
+            throw new BadRequestException("Email is already in use.");
+
+        var user = userDto.Adapt<User>();
+        AuthService.CreatePasswordHashAndSalt(userDto.Password, out byte[] hash, out byte[] salt);
+
+        user.Id = Guid.NewGuid();
+        user.PasswordHash = hash;
+        user.PasswordSalt = salt;
+        user.IsEmailConfirmed = true;
+
+        await _repository.AddAsync(user);
+    }
     public async Task Update(UserUpdateDto userDto)
     {
         var user = await _repository.GetByIdAsync(userDto.Id) ?? throw new NotFoundException(nameof(User));
@@ -49,24 +62,4 @@ public class UserService:IUserService
         var user = await _repository.GetByIdAsync(id) ?? throw new NotFoundException(nameof(User));
         await _repository.DeleteByIdAsync(id);
     }
-
-    public async Task DeleteUserProducts(Guid id, string userJwt)
-    {
-        if (userJwt is null)
-            throw new UnauthorizedException();
-
-        HttpClient httpClient = new();
-        bool isDockerRun = Environment.GetEnvironmentVariable("MODE") == "container";
-        int port = isDockerRun ? 5000 : 44371;
-        string scheme = isDockerRun ? "http" : "https";
-
-        using var httpRequestMessage = new HttpRequestMessage(HttpMethod.Delete, $"{scheme}://localhost:{port}/api/products/user?userid=" + id);
-        httpRequestMessage.Headers.Add("accept", "*/*");
-        httpRequestMessage.Headers.Add("Authorization", userJwt);
-
-        var httpResponseMessage = await httpClient.SendAsync(httpRequestMessage);
-        var code = httpResponseMessage.StatusCode;
-        if (!httpResponseMessage.IsSuccessStatusCode)
-            throw new Exception($"Removal of user's products failed. Status {code}");
-    } 
 }

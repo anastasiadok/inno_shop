@@ -34,7 +34,7 @@ public class ExceptionHandlingMiddleware
         int statusCode = exception switch
         {
             NotFoundException => StatusCodes.Status404NotFound,
-            UserAccessException=> StatusCodes.Status401Unauthorized,
+            UserAccessException=> StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
 

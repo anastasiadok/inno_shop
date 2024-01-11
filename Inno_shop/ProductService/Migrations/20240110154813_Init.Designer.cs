@@ -5,14 +5,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using ProductService.Infrastructure.Data;
+using ProductService.Infrastructure.Contexts;
 
 #nullable disable
 
 namespace ProductService.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    [Migration("20231231172400_Init")]
+    [Migration("20240110154813_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -38,7 +38,6 @@ namespace ProductService.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 

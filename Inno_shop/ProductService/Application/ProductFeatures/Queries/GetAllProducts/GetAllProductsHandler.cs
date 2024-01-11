@@ -1,16 +1,18 @@
 ﻿using MediatR;
-using Microsoft.EntityFrameworkCore;
 using ProductService.Domain.Entities;
-using ProductService.Infrastructure.Data;
+using ProductService.Infrastructure.Interfaces;
 
 namespace ProductService.Application.ProductFeatures.Queries.GetAllProducts;
 
 public class GetAllProductsHandler : BaseHandler, IRequestHandler<GetAllProductsQuery, IEnumerable<Product>>
 {
-    public GetAllProductsHandler(ProductDbContext context) : base(context) { }
+    public GetAllProductsHandler(IProductRepository repository) : base(repository) { }
 
     public async Task<IEnumerable<Product>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken)
     {
-        return await _context.Products.AsNoTracking().ToListAsync(cancellationToken);
+        if(cancellationToken.IsCancellationRequested)
+            throw new TaskCanceledException();
+
+        return await _repository.GetAllAsync();
     }
 }

@@ -16,10 +16,10 @@ public class TokenController : Controller
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshDto model)
+    public async Task<ActionResult<LoginResponseDto>> Refresh([FromBody] RefreshDto model)
     {
-        var responce = await _tokenService.Refresh(model);
-        return Ok(responce);
+        var response = await _tokenService.Refresh(model);
+        return Ok(response);
     }
 
     [Authorize]

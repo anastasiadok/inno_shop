@@ -2,19 +2,18 @@ version: '3.4'
 
 services:
   productservice:
+    container_name: productservice
     image: ${DOCKER_REGISTRY-}productservice
     build:
       context: .
       dockerfile: ProductService/Dockerfile
     environment:
       - MODE=container
-      - ASPNETCORE_ENVIRONMENT=Development 
-      - ASPNETCORE_HTTP_PORTS=5000
-      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Development
     ports:
-     - "5000:5000"
+      - "5000:80"
     depends_on:
-     - productdb
+      - productdb
 
   productdb:
     image: postgres:16.1  
@@ -24,11 +23,12 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: products
     ports:
-     - "5432:5432"
+      - "5432:5432"
     volumes:
-     - product-data:/var/lib/postgresql/data
+      - product-data:/var/lib/postgresql/data
 
   userservice:
+    container_name: userservice
     image: ${DOCKER_REGISTRY-}userservice
     build:
       context: .

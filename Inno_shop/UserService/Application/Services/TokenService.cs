@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text;
 using UserService.Application.Dtos;
 using UserService.Application.Interfaces;
+using UserService.Domain.Entities;
 using UserService.Domain.Exceptions;
 using UserService.Infrastructure.Interfaces;
 
@@ -12,8 +13,10 @@ namespace UserService.Application.Services;
 public class TokenService : ITokenService
 {
     private readonly IUserRepository _repository;
+
     private readonly IConfiguration _configuration;
-    public TokenService(IConfiguration configuration, IUserRepository repository)
+
+    public TokenService(IUserRepository repository, IConfiguration configuration)
     {
         _configuration = configuration;
         _repository = repository;
@@ -23,13 +26,15 @@ public class TokenService : ITokenService
     {
         var principal = GetPrincipalFromExpiredToken(refreshModel.AccessToken);
         if (principal?.Identity?.Name is null)
-            throw new UnauthorizedException();
+            throw new BadRequestException("Invalid jwt.");
 
-        var user = await _repository.GetByEmailAsync(principal.Identity.Name);
-        if (user is null || user.RefreshToken != refreshModel.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
-            throw new UnauthorizedException();
+        var user = await _repository.GetByEmailAsync(principal.Identity.Name) 
+            ?? throw new NotFoundException(nameof(User));
+        
+        if (user.RefreshToken != refreshModel.RefreshToken || user.RefreshTokenExpiry < DateTime.UtcNow)
+            throw new BadRequestException("Invalid refresh token.");
 
-        var token = GenerateJwt(principal.Identity.Name);
+        var token =await GenerateJwt(principal.Identity.Name);
 
         return new(
             JwtToken: new JwtSecurityTokenHandler().WriteToken(token),
@@ -42,10 +47,10 @@ public class TokenService : ITokenService
     public async Task RevokeRefreshTokenByEmail(string userEmail)
     {
         if (userEmail.IsNullOrEmpty())
-            throw new UnauthorizedException();
+            throw new UnauthorizedException("Invalid email.");
 
         var user = await _repository.GetByEmailAsync(userEmail) 
-            ?? throw new UnauthorizedException();
+            ?? throw new NotFoundException(nameof(User));
 
         user.RefreshToken = null;
         user.RefreshTokenExpiry = null;
@@ -55,11 +60,13 @@ public class TokenService : ITokenService
 
     public string GenerateToken() => Guid.NewGuid().ToString();
 
-    public JwtSecurityToken GenerateJwt(string email)
+    public async Task<JwtSecurityToken> GenerateJwt(string email)
     {
+        var user = await _repository.GetByEmailAsync(email) ?? throw new NotFoundException(nameof(User));
+
         var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, _repository.GetByEmailAsync(email).Result.Id.ToString() ),
+                new(ClaimTypes.NameIdentifier, user.Id.ToString() ),
                 new(ClaimTypes.Name, email)
             };
 

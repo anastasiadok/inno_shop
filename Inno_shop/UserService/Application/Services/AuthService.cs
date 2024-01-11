@@ -5,7 +5,7 @@ using System.Text;
 using UserService.Application.Dtos;
 using UserService.Application.Interfaces;
 using UserService.Domain.Exceptions;
-using UserService.Domain.Models;
+using UserService.Domain.Entities;
 using UserService.Infrastructure.Interfaces;
 
 namespace UserService.Application.Services;
@@ -14,22 +14,19 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _repository;
 
-    private readonly IEmailService _emailService;
-
     private readonly ITokenService _tokenService;
 
-    public AuthService(IUserRepository repository, IEmailService emailService, ITokenService tokenService)
+    public AuthService(IUserRepository repository, ITokenService tokenService)
     {
         _repository = repository;
-        _emailService = emailService;
         _tokenService = tokenService;
     }
 
     public async Task<string> Register(UserRegisterDto registerDto)
     {
-        bool isFree = await _emailService.CheckEmailIsFree(registerDto.Email);
+        bool isFree = await _repository.CheckEmailIsFree(registerDto.Email);
         if (!isFree)
-            throw new BadRequestException("Email is already in use");
+            throw new BadRequestException("Email is already in use.");
 
         var user = registerDto.Adapt<User>();
         CreatePasswordHashAndSalt(registerDto.Password, out byte[] hash, out byte[] salt);
@@ -50,12 +47,12 @@ public class AuthService : IAuthService
         User user = await _repository.GetByEmailAsync(loginModel.Email) ?? throw new NotFoundException(nameof(User));
 
         if (!CheckPassword(loginModel.Password, user.PasswordHash, user.PasswordSalt))
-            throw new BadRequestException("Invalid password");
+            throw new BadRequestException("Invalid password.");
 
         if (!user.IsEmailConfirmed)
-            throw new BadRequestException("Email is not confirmed");
+            throw new BadRequestException("Email is not confirmed.");
 
-        JwtSecurityToken jwt = _tokenService.GenerateJwt(loginModel.Email);
+        JwtSecurityToken jwt = await _tokenService.GenerateJwt(loginModel.Email);
         var refreshToken = _tokenService.GenerateToken();
 
         user.RefreshToken = refreshToken;
@@ -91,10 +88,10 @@ public class AuthService : IAuthService
             ?? throw new NotFoundException(nameof(User));
 
         if (user.ResetPasswordToken != model.ResetToken)
-            throw new BadRequestException("Invalid token");
+            throw new BadRequestException("Invalid token.");
 
         if (user.ResetPasswordTokenExpiry < DateTime.UtcNow)
-            throw new BadRequestException("Reset time is out");
+            throw new BadRequestException("Reset time is out.");
 
         CreatePasswordHashAndSalt(model.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
 
@@ -106,14 +103,14 @@ public class AuthService : IAuthService
         await _repository.UpdateAsync(user);
     }
 
-    private static void CreatePasswordHashAndSalt(string password, out byte[] userPasswordHash, out byte[] userPasswordSalt)
+    public static void CreatePasswordHashAndSalt(string password, out byte[] userPasswordHash, out byte[] userPasswordSalt)
     {
         using var hmac = new HMACSHA512();
         userPasswordSalt = hmac.Key;
         userPasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
     }
 
-    private static bool CheckPassword(string password, byte[] userPasswordHash, byte[] userPasswordSalt)
+    public static bool CheckPassword(string password, byte[] userPasswordHash, byte[] userPasswordSalt)
     {
         using var hmac = new HMACSHA512(userPasswordSalt);
         var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));

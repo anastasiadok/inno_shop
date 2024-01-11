@@ -18,9 +18,9 @@ public class UserController : Controller
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<UserDto>> GetAll()
+    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
     {
-        var users = _userService.GetAll();
+        var users = await _userService.GetAll();
         return Ok(users);
     }
 
@@ -29,6 +29,13 @@ public class UserController : Controller
     {
         var user = await _userService.GetById(id);
         return Ok(user);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult> Create([FromBody] UserRegisterDto userDto)
+    {
+        await _userService.Create(userDto);
+        return Ok();
     }
 
     [HttpPut]
@@ -41,7 +48,6 @@ public class UserController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete([FromRoute] Guid id)
     {   
-        await _userService.DeleteUserProducts(id, Request.Headers["Authorization"]);
         await _userService.DeleteById(id);
         return Ok();
     }

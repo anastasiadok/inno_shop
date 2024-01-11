@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using UserService.Application.Interfaces;
 using UserService.Application.Services;
-using UserService.Infrastructure;
+using UserService.Infrastructure.Contexts;
 using UserService.Infrastructure.Interfaces;
 using UserService.Infrastructure.Repositories;
 using UserService.Presentation.Middlewares;
@@ -49,6 +49,10 @@ public class Program
         });
 
         builder.Services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNamingPolicy = null;
+            })
             .AddFluentValidation(fv => fv.RegisterValidatorsFromAssembly(Assembly.GetExecutingAssembly()));
 
         var mode = Environment.GetEnvironmentVariable("MODE");
@@ -72,8 +76,6 @@ public class Program
                 ClockSkew = TimeSpan.Zero
             };
         });
-
-        builder.Services.AddHttpClient();
 
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IAuthService, AuthService>();

@@ -1,4 +1,4 @@
-﻿namespace UserService.Domain.Models;
+﻿namespace UserService.Domain.Entities;
 
 public class User
 {
@@ -6,7 +6,7 @@ public class User
     public string Name { get; set; } = null!;
 
     public string Email { get; set; } = null!;
-    public string EmailConfirmToken { get; set; }
+    public string? EmailConfirmToken { get; set; }
     public bool IsEmailConfirmed { get; set; } = false;
 
     public byte[] PasswordHash { get; set; }

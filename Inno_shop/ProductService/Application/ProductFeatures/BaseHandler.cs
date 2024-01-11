@@ -1,13 +1,13 @@
-﻿using ProductService.Infrastructure.Data;
+﻿using ProductService.Infrastructure.Interfaces;
 
 namespace ProductService.Application.ProductFeatures;
 
 public class BaseHandler
 {
-    protected readonly ProductDbContext _context;
+    protected readonly IProductRepository _repository;
 
-    public BaseHandler(ProductDbContext context)
+    public BaseHandler(IProductRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 }

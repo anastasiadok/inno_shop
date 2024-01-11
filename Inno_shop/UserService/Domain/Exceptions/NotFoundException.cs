@@ -2,5 +2,5 @@
 
 public class NotFoundException : Exception
 {
-    public NotFoundException(string entity) : base($"{entity} not found") { }
+    public NotFoundException(string entity) : base($"{entity} not found.") { }
 }
