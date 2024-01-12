@@ -8,7 +8,7 @@ using UserServiceTests.IntegrationTests.Helpers;
 
 namespace UserServiceTests.IntegrationTests;
 
-[Collection("Sequential")]
+[Collection("UserIntegration")]
 public class TokenControllerTests : IClassFixture<CustomFactory<Program>>
 {
     private readonly HttpClient _client;

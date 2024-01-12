@@ -8,7 +8,7 @@ using UserService.Application.Dtos;
 
 namespace UserServiceTests.IntegrationTests;
 
-[Collection("Sequential")]
+[Collection("UserIntegration")]
 public class UserControllerTests : IClassFixture<CustomFactory<Program>>
 {
     private readonly HttpClient _client;

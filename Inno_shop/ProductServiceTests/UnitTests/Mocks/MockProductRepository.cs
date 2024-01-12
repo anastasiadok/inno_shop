@@ -6,9 +6,11 @@ namespace ProductServiceTests.UnitTests.Mocks;
 
 public static class MockProductRepository
 {
-    public static Mock<IProductRepository> GetProductRepository()
+    private static List<Product> list = new();
+
+    public static void ResetData()
     {
-        List<Product> list = new()
+        list = new()
         {
             new Product
             {
@@ -52,6 +54,10 @@ public static class MockProductRepository
             }
         };
 
+    }
+    public static Mock<IProductRepository> GetProductRepository()
+    {
+        ResetData();
         var mockRepo = new Mock<IProductRepository>();
 
         mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(list);

@@ -8,7 +8,7 @@ using System.Text.Json;
 
 namespace UserServiceTests.IntegrationTests;
 
-[Collection("Sequential")]
+[Collection("UserIntegration")]
 public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
 {
     private readonly HttpClient _client;

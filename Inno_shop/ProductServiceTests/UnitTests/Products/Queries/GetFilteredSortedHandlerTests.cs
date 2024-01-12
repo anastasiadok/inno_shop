@@ -1,19 +1,23 @@
 ﻿using ProductService.Application.ProductFeatures.Queries.GetFilteredSortedProducts;
 using ProductService.Domain.Entities;
+using ProductService.Infrastructure.Interfaces;
 using ProductServiceTests.UnitTests.Mocks;
 using Sieve.Exceptions;
 using Sieve.Models;
 
 namespace ProductServiceTests.UnitTests.Products.Queries;
 
+[Collection("ProductUnit")]
 public class GetFilteredSortedHandlerTests
 {
-    [Fact]
-    public async Task GetValidTest()
-    {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetFilteredSortedProductsHandler handler = new(mockProductRepo, new ApplicationSieveProcessor(new SieveOptionsAccessor()));
+    private readonly IProductRepository mockProductRepo = MockProductRepository.GetProductRepository().Object;
+    private readonly GetFilteredSortedProductsHandler handler;
 
+    public GetFilteredSortedHandlerTests() => handler = new(mockProductRepo, new ApplicationSieveProcessor(new SieveOptionsAccessor()));
+
+    [Fact]
+    public void GetValidTest()
+    {
         SieveModel model = new()
         {
             PageSize = 3,
@@ -21,7 +25,7 @@ public class GetFilteredSortedHandlerTests
             Sorts = "Name"
         };
 
-        var result = await handler.Handle(new GetFilteredSortedProductsQuery(model), CancellationToken.None);
+        var result = handler.Handle(new GetFilteredSortedProductsQuery(model), CancellationToken.None).Result;
         var items = mockProductRepo.GetAllIQueryable().OrderBy(p => p.Name).Chunk(3).ElementAt(1).AsEnumerable();
 
         Assert.IsType<List<Product>>(result);
@@ -30,11 +34,8 @@ public class GetFilteredSortedHandlerTests
     }
 
     [Fact]
-    public async Task GetInvalidParamsTest()
+    public void GetInvalidParamsTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetFilteredSortedProductsHandler handler = new(mockProductRepo, new ApplicationSieveProcessor(new SieveOptionsAccessor()));
-
         SieveModel model = new()
         {
             PageSize = 3,
@@ -44,16 +45,13 @@ public class GetFilteredSortedHandlerTests
 
         var act = () => handler.Handle(new GetFilteredSortedProductsQuery(model), CancellationToken.None);
 
-        var exception = await Assert.ThrowsAsync<SieveMethodNotFoundException>(act);
+        var exception = Assert.ThrowsAsync<SieveMethodNotFoundException>(act).Result;
         Assert.Equal("Nameeeeeeeeeee not found.", exception.Message);
     }
 
     [Fact]
-    public async Task GetCancelledTest()
+    public void GetCancelledTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetFilteredSortedProductsHandler handler = new(mockProductRepo, new ApplicationSieveProcessor(new SieveOptionsAccessor()));
-
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -66,7 +64,7 @@ public class GetFilteredSortedHandlerTests
 
         var act = () => handler.Handle(new GetFilteredSortedProductsQuery(model), cts.Token);
 
-        var exception = await Assert.ThrowsAsync<TaskCanceledException>(act);
+        var exception = Assert.ThrowsAsync<TaskCanceledException>(act).Result;
         Assert.Equal("A task was canceled.", exception.Message);
     }
 }

@@ -1,159 +1,144 @@
 ﻿using UserService.Application.Dtos;
+using UserService.Application.Interfaces;
 using UserService.Domain.Exceptions;
+using UserService.Infrastructure.Interfaces;
 using UserServiceTests.UnitTests.Mocks;
 
 namespace UserServiceTests.UnitTests.Services;
 
+[Collection("UserUnit")]
 public class UserTests
 {
-    [Fact]
-    public async Task GetAllTest()
-    {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
+    private readonly IUserRepository mockUserRepo = MockUserRepository.GetUserRepository().Object;
 
-        var result = await service.GetAll();
+    private readonly IUserService mockUserService;
+
+    public UserTests()
+    {
+        mockUserService = new UServices.UserService(mockUserRepo);
+    }
+
+    [Fact]
+    public void GetAllTest()
+    {
+        var result = mockUserService.GetAll().Result;
 
         Assert.IsType<List<UserDto>>(result);
         Assert.Equal(3, result.Count());
     }
 
     [Fact]
-    public async Task GetByIdValidTest()
+    public void GetByIdValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
         Guid idToGet = new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2");
 
-        var result = await service.GetById(idToGet);
+        var result = mockUserService.GetById(idToGet).Result;
 
         Assert.IsType<UserDto>(result);
         Assert.Equal(idToGet, result.Id);
     }
 
     [Fact]
-    public async Task GetByIdNotExistingTest()
+    public void GetByIdNotExistingTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
+        var act = () => mockUserService.GetById(new("00000000-9ABD-4d9d-80C7-02AF85C822A2"));
 
-        var act = () => service.GetById(new("00000000-9ABD-4d9d-80C7-02AF85C822A2"));
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task GetByEmailValidTest()
+    public void GetByEmailValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
         string emailToGet = "Adolf@gmail.com";
 
-        var result = await service.GetByEmail(emailToGet);
+        var result = mockUserService.GetByEmail(emailToGet).Result;
 
         Assert.IsType<UserDto>(result);
         Assert.Equal(emailToGet, result.Email);
     }
 
     [Fact]
-    public async Task GetByEmailNotExistingTest()
+    public void GetByEmailNotExistingTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
+        var act = () => mockUserService.GetByEmail("aaaaa@gmail.com");
 
-        var act = () => service.GetByEmail("aaaaa@gmail.com");
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task CreateValidTest()
+    public void CreateValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
         UserRegisterDto userToAdd = new("user", "user@gmail.com", "userpassword");
 
-        var result = service.Create(userToAdd).IsCompletedSuccessfully;
-        var items = await mockUserRepo.GetAllAsync();
+        var result = mockUserService.Create(userToAdd).IsCompletedSuccessfully;
+        var items = mockUserRepo.GetAllAsync().Result;
 
         Assert.True(result);
         Assert.Equal(4, items.Count());
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task CreateWithUsedEmailTest()
+    public void CreateWithUsedEmailTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
         UserRegisterDto userToAdd = new("user", "Adolf@gmail.com", "userpassword");
 
-        var act = () => service.Create(userToAdd);
-        var items = await mockUserRepo.GetAllAsync();
+        var act = () => mockUserService.Create(userToAdd);
+        var items = mockUserRepo.GetAllAsync().Result;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Email is already in use.", exception.Message);
         Assert.Equal(3, items.Count());
     }
 
     [Fact]
-    public async Task UpdateValidTest()
-    {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
+    public void UpdateValidTest()
+    { 
         UserUpdateDto toUpdate = new(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2"), "newname");
 
-        var result = service.Update(toUpdate).IsCompletedSuccessfully;
-        var item = await mockUserRepo.GetByIdAsync(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2"));
+        var result = mockUserService.Update(toUpdate).IsCompletedSuccessfully;
+        var item = mockUserRepo.GetByIdAsync(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2")).Result;
 
         Assert.True(result);
         Assert.Equal("newname", item.Name);
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task UpdateNotExistingUserTest()
+    public void UpdateNotExistingUserTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
         UserUpdateDto toUpdate = new(new("00000000-9ABD-4d9d-80C7-02AF85C822A2"), "newname");
 
-        var act = () => service.Update(toUpdate);
-        var items = await mockUserRepo.GetAllAsync();
+        var act = () => mockUserService.Update(toUpdate);
+        var items = mockUserRepo.GetAllAsync().Result;
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
         Assert.Equal(3, items.Count());
     }
 
     [Fact]
-    public async Task DeleteByIdValidTest()
+    public void DeleteByIdValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
-
-        var result = service.DeleteById(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2")).IsCompletedSuccessfully;
-        var items = await mockUserRepo.GetAllAsync();
+        var result = mockUserService.DeleteById(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2")).IsCompletedSuccessfully;
+        var items = mockUserRepo.GetAllAsync().Result;
 
         Assert.True(result);
         Assert.Equal(2, items.Count());
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task DeleteByIdNotExistingTest()
+    public void DeleteByIdNotExistingTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        UServices.UserService service = new(mockUserRepo);
+        var act = () => mockUserService.DeleteById(new("00000000-9ABD-4d9d-80C7-02AF85C822A2"));
 
-        var act = () => service.DeleteById(new("00000000-9ABD-4d9d-80C7-02AF85C822A2"));
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 }

@@ -1,199 +1,161 @@
 ﻿using Microsoft.Extensions.Configuration;
 using UserService.Application.Dtos;
+using UserService.Application.Interfaces;
 using UserService.Application.Services;
 using UserService.Domain.Exceptions;
+using UserService.Infrastructure.Interfaces;
 using UserServiceTests.UnitTests.Mocks;
 
 namespace UserServiceTests.UnitTests.Services;
 
+[Collection("UserUnit")]
 public class AuthTests
 {
+    private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+    private readonly IUserRepository mockUserRepo = MockUserRepository.GetUserRepository().Object;
 
-    [Fact]
-    public async Task RegisterValidTest()
+    private readonly ITokenService mockTokenService;
+    private readonly IAuthService mockAuthService;
+
+    public AuthTests()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
-        UserRegisterDto dto = new("name", "string@gmail.com", "password");
-
-        var token = await service.Register(dto);
-        var items = await mockUserRepo.GetAllAsync();
-
-        Assert.NotEmpty(token);
-        Assert.Equal(4, items.Count());
+        mockTokenService = new TokenService(mockUserRepo, configuration);
+        mockAuthService = new AuthService(mockUserRepo, mockTokenService);
     }
 
     [Fact]
-    public async Task RegisterWithUsedEmailTest()
+    public void RegisterValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
+        UserRegisterDto dto = new("name", "string@gmail.com", "password");
 
+        var token = mockAuthService.Register(dto).Result;
+        var items = mockUserRepo.GetAllAsync().Result;
+
+        Assert.NotEmpty(token);
+        Assert.Equal(4, items.Count());
+
+        MockUserRepository.ResetData();
+    }
+
+    [Fact]
+    public void RegisterWithUsedEmailTest()
+    {
         UserRegisterDto dto = new("name", "john@gmail.com", "password");
 
-        var act = () => service.Register(dto);
+        var act = () => mockAuthService.Register(dto);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Email is already in use.", exception.Message);
     }
 
     [Fact]
-    public async Task LoginValidTest()
+    public void LoginValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         LoginDto dto = new("john@gmail.com", "password");
 
-        var result = await service.Login(dto);
-        var item = await mockUserRepo.GetByEmailAsync("john@gmail.com");
+        var result = mockAuthService.Login(dto).Result;
+        var item = mockUserRepo.GetByEmailAsync("john@gmail.com").Result;
 
         Assert.Equal(item.Id, result.UserId);
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task LoginNotExistingUserTest()
+    public void LoginNotExistingUserTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         LoginDto dto = new("johhhhhn@gmail.com", "password");
 
-        var act = () => service.Login(dto);
+        var act = () => mockAuthService.Login(dto);
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task LoginInvalidPasswordTest()
+    public void LoginInvalidPasswordTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         LoginDto dto = new("john@gmail.com", "passssssssssword");
 
-        var act = () => service.Login(dto);
+        var act = () => mockAuthService.Login(dto);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Invalid password.", exception.Message);
     }
 
     [Fact]
-    public async Task LoginWithNotConfirmedEmailTest()
+    public void LoginWithNotConfirmedEmailTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         LoginDto dto = new("nameee@gmail.com", "password");
 
-        var act = () => service.Login(dto);
+        var act = () => mockAuthService.Login(dto);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Email is not confirmed.", exception.Message);
     }
 
     [Fact]
-    public async Task ForgotPasswordValidTest()
+    public void ForgotPasswordValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
-        var token = await service.ForgotPassword("john@gmail.com");
+        var token = mockAuthService.ForgotPassword("john@gmail.com").Result;
 
         Assert.NotEmpty(token);
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task ForgotPasswordNotExistingUserTest()
+    public void ForgotPasswordNotExistingUserTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
+        var act = () => mockAuthService.ForgotPassword("johhhhhn@gmail.com");
 
-        var act = () => service.ForgotPassword("johhhhhn@gmail.com");
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task ResetPasswordValidTest()
+    public void ResetPasswordValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         ResetPasswordDto dto = new("nameee@gmail.com", "newpassword", "11111111-1111-1111-1111-111111111111");
 
-        var result = service.ResetPassword(dto).IsCompletedSuccessfully;
+        var result = mockAuthService.ResetPassword(dto).IsCompletedSuccessfully;
 
         Assert.True(result);
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task ResetPasswordNotExistingUserTest()
+    public void ResetPasswordNotExistingUserTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         ResetPasswordDto dto = new("nameeeeeeeeeee@gmail.com", "ppppassword", "11111111-1111-1111-1111-111111111111");
 
-        var act = () => service.ResetPassword(dto);
+        var act = () => mockAuthService.ResetPassword(dto);
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task ResetPasswordInvalidResetTokenTest()
+    public void ResetPasswordInvalidResetTokenTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         ResetPasswordDto dto = new("nameee@gmail.com", "password", "11111111-0000-1111-1111-111111111111");
 
-        var act = () => service.ResetPassword(dto);
+        var act = () => mockAuthService.ResetPassword(dto);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Invalid token.", exception.Message);
     }
 
     [Fact]
-    public async Task ResetPasswordExpiredResetTokenTest()
+    public void ResetPasswordExpiredResetTokenTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var mockTokenService = new TokenService(mockUserRepo, configuration);
-        var service = new AuthService(mockUserRepo, mockTokenService);
-
         ResetPasswordDto dto = new("nameee@gmail.com", "password", "11111111-1111-1111-1111-111111111111");
 
-        var act = () => service.ResetPassword(dto);
-        await Task.Delay(5000);
+        var act = () => mockAuthService.ResetPassword(dto);
+        Thread.Sleep(5000);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Reset time is out.", exception.Message);
     }
 }

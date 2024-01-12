@@ -1,108 +1,96 @@
 ﻿using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using UserService.Application.Dtos;
+using UserService.Application.Interfaces;
+using UserService.Application.Services;
 using UserService.Domain.Exceptions;
+using UserService.Infrastructure.Interfaces;
 using UserServiceTests.UnitTests.Mocks;
 
 namespace UserServiceTests.UnitTests.Services;
 
+[Collection("UserUnit")]
 public class TokenTests
 {
-    [Fact]
-    public async Task RefreshValidTest()
-    {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
+    private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+    private readonly IUserRepository mockUserRepo = MockUserRepository.GetUserRepository().Object;
 
-        var token = await tokenService.GenerateJwt("john@gmail.com");
+    private readonly ITokenService mockTokenService;
+
+    public TokenTests()
+    {
+        mockTokenService = new TokenService(mockUserRepo, configuration);
+    }
+
+    [Fact]
+    public void RefreshValidTest()
+    {
+        var token = mockTokenService.GenerateJwt("john@gmail.com").Result;
         RefreshDto dto = new(new JwtSecurityTokenHandler().WriteToken(token),"11111111-1111-1111-4444-555555555555");
 
-        var response = await tokenService.Refresh(dto);
-        var item = await mockUserRepo.GetByEmailAsync("john@gmail.com");
+        var response = mockTokenService.Refresh(dto).Result;
+        var item = mockUserRepo.GetByEmailAsync("john@gmail.com").Result;
 
         Assert.Equal(item.RefreshToken, response.RefreshToken);
     }
 
     [Fact]
-    public async Task RefreshInvalidRefreshTokenTest()
+    public void RefreshInvalidRefreshTokenTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
-
-        var token = await tokenService.GenerateJwt("john@gmail.com");
+        var token = mockTokenService.GenerateJwt("john@gmail.com").Result;
         RefreshDto dto = new(new JwtSecurityTokenHandler().WriteToken(token), "11112221-1111-1111-4444-555555555555");
 
-        var act = () => tokenService.Refresh(dto);
+        var act = () => mockTokenService.Refresh(dto);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Invalid refresh token.", exception.Message);
     }
 
     [Fact]
-    public async Task RevokeValidTest()
+    public void RevokeValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
-
-        var response = tokenService.RevokeRefreshTokenByEmail("john@gmail.com").IsCompletedSuccessfully;
-        var item = await mockUserRepo.GetByEmailAsync("john@gmail.com");
+        var response = mockTokenService.RevokeRefreshTokenByEmail("john@gmail.com").IsCompletedSuccessfully;
+        var item = mockUserRepo.GetByEmailAsync("john@gmail.com").Result;
 
         Assert.True(response);
         Assert.Null(item.RefreshToken);
         Assert.Null(item.RefreshTokenExpiry);
+
+        MockUserRepository.ResetData();
     }
 
     [Fact]
-    public async Task RevokeWithEmptyEmailTest()
+    public void RevokeWithEmptyEmailTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
+        var act = () => mockTokenService.RevokeRefreshTokenByEmail("");
 
-        var act = () => tokenService.RevokeRefreshTokenByEmail("");
-
-        var exception = await Assert.ThrowsAsync<UnauthorizedException>(act);
+        var exception = Assert.ThrowsAsync<UnauthorizedException>(act).Result;
         Assert.Equal("Invalid email.", exception.Message);
     }
 
     [Fact]
-    public async Task RevokeNotExistingUserTest()
+    public void RevokeNotExistingUserTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
+        var act = () => mockTokenService.RevokeRefreshTokenByEmail("aaaaa@gmail.com");
 
-        var act = () => tokenService.RevokeRefreshTokenByEmail("aaaaa@gmail.com");
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task GenerateJwtValidTest()
+    public void GenerateJwtValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
-
-        var token = new JwtSecurityTokenHandler().WriteToken(await tokenService.GenerateJwt("john@gmail.com"));
+        var token = new JwtSecurityTokenHandler().WriteToken(mockTokenService.GenerateJwt("john@gmail.com").Result);
 
         Assert.NotEmpty(token);
     }
 
     [Fact]
-    public async Task GenerateJwtNotExistingUserTest()
+    public void GenerateJwtNotExistingUserTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        UServices.TokenService tokenService = new(mockUserRepo, configuration);
+        var act = () => mockTokenService.GenerateJwt("johhhhhhhn@gmail.com");
 
-        var act = () => tokenService.GenerateJwt("johhhhhhhn@gmail.com");
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 

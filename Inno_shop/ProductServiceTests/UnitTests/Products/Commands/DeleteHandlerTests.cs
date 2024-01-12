@@ -1,65 +1,62 @@
 ﻿using ProductService.Application.ProductFeatures.Commands.DeleteProduct;
 using ProductService.Domain.Exceptions;
+using ProductService.Infrastructure.Interfaces;
 using ProductServiceTests.UnitTests.Mocks;
 
 namespace ProductServiceTests.UnitTests.Products.Commands;
 
+[Collection("ProductUnit")]
 public class DeleteHandlerTests
 {
-    [Fact]
-    public async Task DeleteValidTest()
-    {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        DeleteProductHandler handler = new(mockProductRepo);
+    private readonly IProductRepository mockProductRepo = MockProductRepository.GetProductRepository().Object;
+    private readonly DeleteProductHandler handler;
 
+    public DeleteHandlerTests() => handler = new(mockProductRepo);
+
+    [Fact]
+    public void DeleteValidTest()
+    {
         var result = handler.Handle(new DeleteProductCommand(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A1"), new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2")), CancellationToken.None).IsCompletedSuccessfully;
-        var items = await mockProductRepo.GetAllAsync();
+        var items = mockProductRepo.GetAllAsync().Result;
 
         Assert.True(result);
         Assert.Equal(3, items.Count());
+
+        MockProductRepository.ResetData();
     }
 
     [Fact]
-    public async Task DeleteWithInvaidUserTest()
+    public void DeleteWithInvaidUserTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        DeleteProductHandler handler = new(mockProductRepo);
-
         var act = () => handler.Handle(new DeleteProductCommand(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A1"), new("00000000-9ABD-4d9d-80C7-02AF85C822A2")), CancellationToken.None);
-        var items = await mockProductRepo.GetAllAsync();
+        var items = mockProductRepo.GetAllAsync().Result;
 
-        var exception = await Assert.ThrowsAsync<UserAccessException>(act);
+        var exception = Assert.ThrowsAsync<UserAccessException>(act).Result;
         Assert.Equal("User can only manage their own products.", exception.Message);
         Assert.Equal(4, items.Count());
     }
 
     [Fact]
-    public async Task DeleteNotExistingTest()
+    public void DeleteNotExistingTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        DeleteProductHandler handler = new(mockProductRepo);
-
         var act = () => handler.Handle(new DeleteProductCommand(new("00000000-9ABD-4d9d-80C7-02AF85C822A1"), new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2")), CancellationToken.None);
-        var items = await mockProductRepo.GetAllAsync();
+        var items = mockProductRepo.GetAllAsync().Result;
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("Product not found.", exception.Message);
         Assert.Equal(4, items.Count());
     }
 
     [Fact]
-    public async Task DeleteCancelledTest()
+    public void DeleteCancelledTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        DeleteProductHandler handler = new(mockProductRepo);
-
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         var act = () => handler.Handle(new DeleteProductCommand(new("136DA01F-9ABD-4d9d-80C7-02AF85C822A1"), new("136DA01F-9ABD-4d9d-80C7-02AF85C822A2")), cts.Token);
-        var items = await mockProductRepo.GetAllAsync();
+        var items = mockProductRepo.GetAllAsync().Result;
 
-        var exception = await Assert.ThrowsAsync<TaskCanceledException>(act);
+        var exception = Assert.ThrowsAsync<TaskCanceledException>(act).Result;
         Assert.Equal("A task was canceled.", exception.Message);
         Assert.Equal(4, items.Count());
     }

@@ -7,11 +7,12 @@ namespace UserServiceTests.UnitTests.Mocks;
 
 public static class MockUserRepository
 {
-    public static Mock<IUserRepository> GetUserRepository()
+    private static List<User> list = new();
+
+    public static void ResetData()
     {
-        byte[] hash, salt;
-        AuthService.CreatePasswordHashAndSalt("password", out hash, out salt);
-        List<User> list = new()
+        AuthService.CreatePasswordHashAndSalt("password", out byte[] hash, out byte[] salt);
+        list = new()
         {
             new User
             {
@@ -56,7 +57,11 @@ public static class MockUserRepository
                 ResetPasswordTokenExpiry = DateTime.UtcNow.AddSeconds(5)
             }
         };
+    }
 
+    public static Mock<IUserRepository> GetUserRepository()
+    {
+        ResetData();
         var mockRepo = new Mock<IUserRepository>();
 
         mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(list);

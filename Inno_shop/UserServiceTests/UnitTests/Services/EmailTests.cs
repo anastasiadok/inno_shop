@@ -1,62 +1,61 @@
 ﻿using Microsoft.Extensions.Configuration;
+using UserService.Application.Interfaces;
 using UserService.Application.Services;
 using UserService.Domain.Exceptions;
+using UserService.Infrastructure.Interfaces;
 using UserServiceTests.UnitTests.Mocks;
 
 namespace UserServiceTests.UnitTests.Services;
 
+[Collection("UserUnit")]
 public class EmailTests
 {
-    [Fact]
-    public async Task ConfirmEmailValidTest()
+    private readonly IConfiguration configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+    private readonly IUserRepository mockUserRepo = MockUserRepository.GetUserRepository().Object;
+
+    private readonly IEmailService mockEmailService;
+
+    public EmailTests()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var service = new EmailService(mockUserRepo, configuration);
-
-        var result = service.ConfirmEmailByToken("nameee@gmail.com", "11111111-2222-3333-4444-555555555555").IsCompletedSuccessfully;
-        var item = await mockUserRepo.GetByEmailAsync("nameee@gmail.com");
-
-        Assert.True(result);
-        Assert.True(item.IsEmailConfirmed);
+        mockEmailService = new EmailService(mockUserRepo, configuration);
     }
 
     [Fact]
-    public async Task ConfirmEmailNotExistingUserTest()
+    public void ConfirmEmailValidTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var service = new EmailService(mockUserRepo, configuration);
+        var result = mockEmailService.ConfirmEmailByToken("nameee@gmail.com", "11111111-2222-3333-4444-555555555555").IsCompletedSuccessfully;
+        var item = mockUserRepo.GetByEmailAsync("nameee@gmail.com").Result;
 
-        var act = () => service.ConfirmEmailByToken("nameeeeeeeee@gmail.com", "11111111-2222-3333-4444-555555555555");
+        Assert.True(result);
+        Assert.True(item.IsEmailConfirmed);
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        MockUserRepository.ResetData();
+    }
+
+    [Fact]
+    public void ConfirmEmailNotExistingUserTest()
+    {
+        var act = () => mockEmailService.ConfirmEmailByToken("nameeeeeeeee@gmail.com", "11111111-2222-3333-4444-555555555555");
+
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("User not found.", exception.Message);
     }
 
     [Fact]
-    public async Task ConfirmEmailInvalidTokenTest()
+    public void ConfirmEmailInvalidTokenTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var service = new EmailService(mockUserRepo, configuration);
+        var act = () => mockEmailService.ConfirmEmailByToken("nameee@gmail.com", "00000000-2222-3333-4444-555555555555");
 
-        var act = () => service.ConfirmEmailByToken("nameee@gmail.com", "00000000-2222-3333-4444-555555555555");
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Invalid token.", exception.Message);
     }
 
     [Fact]
-    public async Task ConfirmEmailAlreadyConfirmedTest()
+    public void ConfirmEmailAlreadyConfirmedTest()
     {
-        var mockUserRepo = MockUserRepository.GetUserRepository().Object;
-        var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        var service = new EmailService(mockUserRepo, configuration);
+        var act = () => mockEmailService.ConfirmEmailByToken("john@gmail.com", "11111111-2222-3333-4444-555555555555");
 
-        var act = () => service.ConfirmEmailByToken("john@gmail.com", "11111111-2222-3333-4444-555555555555");
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(act);
+        var exception = Assert.ThrowsAsync<BadRequestException>(act).Result;
         Assert.Equal("Email is already confirmed.", exception.Message);
     }
 }

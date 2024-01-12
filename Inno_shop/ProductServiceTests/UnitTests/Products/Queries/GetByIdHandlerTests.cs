@@ -5,47 +5,41 @@ using ProductServiceTests.UnitTests.Mocks;
 
 namespace ProductServiceTests.UnitTests.Products.Queries;
 
+[Collection("ProductUnit")]
 public class GetByIdHandlerTests
 {
-    [Fact]
-    public async Task GetValidTest()
-    {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetByIdProductHandler handler = new(mockProductRepo);
+    private readonly GetByIdProductHandler handler = new(MockProductRepository.GetProductRepository().Object);
 
+    [Fact]
+    public void GetValidTest()
+    {
         Guid idToGet = new("336DA01F-9ABD-4d9d-80C7-02AF85C822A1");
-        var result = await handler.Handle(new GetByIdProductQuery(idToGet), CancellationToken.None);
+        var result = handler.Handle(new GetByIdProductQuery(idToGet), CancellationToken.None).Result;
 
         Assert.IsType<Product>(result);
         Assert.Equal(idToGet, result.Id);
     }
 
     [Fact]
-    public async Task GetNotExistingTest()
+    public void GetNotExistingTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetByIdProductHandler handler = new(mockProductRepo);
-
         Guid idToGet = new("00000000-9ABD-4d9d-80C7-02AF85C822A1");
         var act = () => handler.Handle(new GetByIdProductQuery(idToGet), CancellationToken.None);
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(act);
+        var exception = Assert.ThrowsAsync<NotFoundException>(act).Result;
         Assert.Equal("Product not found.", exception.Message);
     }
 
     [Fact]
-    public async Task GetCancelledTest()
+    public void GetCancelledTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetByIdProductHandler handler = new(mockProductRepo);
-
         Guid idToGet = new("336DA01F-9ABD-4d9d-80C7-02AF85C822A1");
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         var act = () => handler.Handle(new GetByIdProductQuery(idToGet), cts.Token);
 
-        var exception = await Assert.ThrowsAsync<TaskCanceledException>(act);
+        var exception = Assert.ThrowsAsync<TaskCanceledException>(act).Result;
         Assert.Equal("A task was canceled.", exception.Message);
     }
 }

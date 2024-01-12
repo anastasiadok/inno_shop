@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using ProductService;
 using ProductService.Application.Dtos;
 using ProductService.Domain.Entities;
-using ProductService.Infrastructure.Contexts;
 using ProductServiceTests.IntegrationTests.Helpers;
 using System.Net;
 using System.Net.Http.Json;

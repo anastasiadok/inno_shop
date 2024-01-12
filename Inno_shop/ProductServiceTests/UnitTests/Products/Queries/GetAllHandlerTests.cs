@@ -4,32 +4,29 @@ using ProductServiceTests.UnitTests.Mocks;
 
 namespace ProductServiceTests.UnitTests.Products.Queries;
 
+[Collection("ProductUnit")]
 public class GetAllHandlerTests
 {
-    [Fact]
-    public async Task GetValidTest()
-    {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetAllProductsHandler handler = new(mockProductRepo);
+    private readonly GetAllProductsHandler handler = new(MockProductRepository.GetProductRepository().Object);
 
-        var result = await handler.Handle(new GetAllProductsQuery(), CancellationToken.None);
+    [Fact]
+    public void GetValidTest()
+    {
+        var result = handler.Handle(new GetAllProductsQuery(), CancellationToken.None).Result;
 
         Assert.IsType<List<Product>>(result);
         Assert.Equal(4, result.Count());
     }
 
     [Fact]
-    public async Task GetCancelledTest()
+    public void GetCancelledTest()
     {
-        var mockProductRepo = MockProductRepository.GetProductRepository().Object;
-        GetAllProductsHandler handler = new(mockProductRepo);
-
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
         var act = () => handler.Handle(new GetAllProductsQuery(), cts.Token);
 
-        var exception = await Assert.ThrowsAsync<TaskCanceledException>(act);
+        var exception = Assert.ThrowsAsync<TaskCanceledException>(act).Result;
         Assert.Equal("A task was canceled.", exception.Message);
     }
 }
