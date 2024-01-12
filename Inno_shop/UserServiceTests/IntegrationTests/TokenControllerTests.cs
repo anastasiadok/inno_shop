@@ -5,27 +5,26 @@ using System.Text.Json;
 using UserService;
 using UserService.Application.Dtos;
 using UserServiceTests.IntegrationTests.Helpers;
-using Microsoft.Extensions.DependencyInjection;
-using UserService.Infrastructure.Contexts;
 
 namespace UserServiceTests.IntegrationTests;
 
-public class TokenControllerTests: IClassFixture<CustomFactory<Program>>
+[Collection("Sequential")]
+public class TokenControllerTests : IClassFixture<CustomFactory<Program>>
 {
     private readonly HttpClient _client;
 
     public TokenControllerTests(CustomFactory<Program> factory) => _client = factory.CreateClient();
 
     [Fact]
-    public async Task RefreshValidTest()
+    public void RefreshValidTest()
     {
-        RefreshDto dto = new(await JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2"), "11111111-1111-1111-4444-555555555555");
-        
+        RefreshDto dto = new(JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2").Result, "11111111-1111-1111-4444-555555555555");
+
         var request = new HttpRequestMessage(HttpMethod.Post, "api/tokens/refresh/");
         request.Content = JsonContent.Create(dto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var responseDto = JsonSerializer.Deserialize<LoginResponseDto>(responseString);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -33,15 +32,15 @@ public class TokenControllerTests: IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task RefreshNotExistingTest()
+    public void RefreshNotExistingTest()
     {
-        RefreshDto dto = new(await JwtGenerator.GenerateJwt("johgggggggggggn@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2"), "11111111-1111-1111-4444-555555555555");
+        RefreshDto dto = new(JwtGenerator.GenerateJwt("johgggggggggggn@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2").Result, "11111111-1111-1111-4444-555555555555");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/tokens/refresh/");
         request.Content = JsonContent.Create(dto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -49,15 +48,15 @@ public class TokenControllerTests: IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task RefreshInvalidRefreshTokenTest()
+    public void RefreshInvalidRefreshTokenTest()
     {
-        RefreshDto dto = new(await JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2"), "11111111-0000-1111-4444-555555555555");
+        RefreshDto dto = new(JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2").Result, "11111111-0000-1111-4444-555555555555");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/tokens/refresh/");
         request.Content = JsonContent.Create(dto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -65,28 +64,26 @@ public class TokenControllerTests: IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task RevokehValidTest()
+    public void RevokehValidTest()
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "api/tokens/revoke/");
-        request.Headers.Add("Authorization", "Bearer " + await JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2"));
+        request.Headers.Add("Authorization", "Bearer " + JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2").Result);
 
-        var response = await _client.SendAsync(request);
+        var response = _client.SendAsync(request).Result;
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        using var scope = new CustomFactory<Program>().Services.CreateScope();
-        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-        SeedData.PopulateTestData(appContext);
+        SeedData.ResetData();
     }
 
     [Fact]
-    public async Task RevokeNotExistingTest()
+    public void RevokeNotExistingTest()
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "api/tokens/revoke/");
-        request.Headers.Add("Authorization", "Bearer " + await JwtGenerator.GenerateJwt("johhhhn@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2"));
+        request.Headers.Add("Authorization", "Bearer " + JwtGenerator.GenerateJwt("johhhhn@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2").Result);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -94,11 +91,11 @@ public class TokenControllerTests: IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task RevokeUnauthorizedTest()
-    { 
+    public void RevokeUnauthorizedTest()
+    {
         var request = new HttpRequestMessage(HttpMethod.Post, "api/tokens/revoke/");
 
-        var response = await _client.SendAsync(request);
+        var response = _client.SendAsync(request).Result;
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

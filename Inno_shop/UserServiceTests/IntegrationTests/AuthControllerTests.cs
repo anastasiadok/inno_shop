@@ -5,11 +5,10 @@ using UserService.Application.Dtos;
 using UserServiceTests.IntegrationTests.Helpers;
 using UserService;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using UserService.Infrastructure.Contexts;
 
 namespace UserServiceTests.IntegrationTests;
 
+[Collection("Sequential")]
 public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
 {
     private readonly HttpClient _client;
@@ -17,15 +16,39 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     public AuthControllerTests(CustomFactory<Program> factory) => _client = factory.CreateClient();
 
     [Fact]
-    public async Task RegisterUsedEmailTest()
+    public void RegisterValidTest()
+    {
+        var user = new UserRegisterDto("pfjggfjfjjr", "johhhhhhn@gmail.com", "password");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/register/");
+        request.Content = JsonContent.Create(user);
+
+        var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/users/");
+        getRequest.Headers.Add("Authorization", "Bearer " + JwtGenerator.GenerateJwt("john@gmail.com", "136DA01F-9ABD-4d9d-80C7-02AF85C822A2").Result);
+
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
+
+        var getResponse = _client.SendAsync(getRequest).Result;
+        var getResponseString = getResponse.Content.ReadAsStringAsync().Result;
+        var getResult = JsonSerializer.Deserialize<List<UserDto>>(getResponseString);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Registration was successful. Check email.", responseString);
+        Assert.Equal(4, getResult.Count);
+
+        SeedData.ResetData();
+    }
+    [Fact]
+    public void RegisterUsedEmailTest()
     {
         var user = new UserRegisterDto("pfjggfjfjjr", "john@gmail.com", "password");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/register/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -33,15 +56,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task RegisterValidationErrorTest()
+    public void RegisterValidationErrorTest()
     {
         var user = new UserRegisterDto("pfjggfjfjjr", "chghgchc@gmail.com", "");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/register/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -49,37 +72,33 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task LoginValidTest()
+    public void LoginValidTest()
     {
-        using var scope = new CustomFactory<Program>().Services.CreateScope();
-        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-        SeedData.PopulateTestData(appContext);
-
         var user = new LoginDto("john@gmail.com", "password");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/login/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var responseDto = JsonSerializer.Deserialize<LoginResponseDto>(responseString);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.NotNull(responseDto.JwtToken);
 
-        SeedData.PopulateTestData(appContext);
+        SeedData.ResetData();
     }
 
     [Fact]
-    public async Task LoginNotExistingEmailTest()
+    public void LoginNotExistingEmailTest()
     {
         var user = new LoginDto("fchgvjhb@gmail.com", "password");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/login/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -87,14 +106,14 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task LoginInvalidPasswordTest()
+    public void LoginInvalidPasswordTest()
     {
         var user = new LoginDto("john@gmail.com", "passsssssssssssword");
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/login/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -102,15 +121,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task LoginNotConfirmedEmailTest()
+    public void LoginNotConfirmedEmailTest()
     {
         var user = new LoginDto("nameee@gmail.com", "password");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/login/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -118,15 +137,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task LoginValidationErrorTest()
+    public void LoginValidationErrorTest()
     {
         var user = new LoginDto("johfhgvjilcom", "password");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/login/");
         request.Content = JsonContent.Create(user);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -134,36 +153,32 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ForgotPasswordValidTest()
+    public void ForgotPasswordValidTest()
     {
-        using var scope = new CustomFactory<Program>().Services.CreateScope();
-        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-        SeedData.PopulateTestData(appContext);
-
         var email = "john@gmail.com";
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"api/auth/forgotpassword/?email={email}");
         request.Content = JsonContent.Create(email);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal($"Check {email} email. You may now reset your password whithin 1 hour.", responseString);
 
-        SeedData.PopulateTestData(appContext);
+        SeedData.ResetData();
     }
 
     [Fact]
-    public async Task ForgotPasswordValidationErrorTest()
+    public void ForgotPasswordValidationErrorTest()
     {
         var email = "johfhgailcom";
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"api/auth/forgotpassword/?email={email}");
         request.Content = JsonContent.Create(email);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -171,15 +186,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ForgotPasswordNotExistingTest()
+    public void ForgotPasswordNotExistingTest()
     {
         var email = "joooooohn@gmail.com";
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"api/auth/forgotpassword/?email={email}");
         request.Content = JsonContent.Create(email);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -187,34 +202,32 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ConfirmEmailValidTest()
+    public void ConfirmEmailValidTest()
     {
         var email = "nameee@gmail.com";
         var token = "11111111-2222-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/confirmemail?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("Confirmation was successful.", responseString);
 
-        using var scope = new CustomFactory<Program>().Services.CreateScope();
-        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-        SeedData.PopulateTestData(appContext);
+        SeedData.ResetData();
     }
 
     [Fact]
-    public async Task ConfirmEmailNotExistingTest()
+    public void ConfirmEmailNotExistingTest()
     {
         var email = "joooohn@gmail.com";
         var token = "11111111-2222-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/confirmemail?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -222,15 +235,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ConfirmConfirmedEmailTest()
+    public void ConfirmConfirmedEmailTest()
     {
         var email = "john@gmail.com";
         var token = "11111111-2222-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/confirmemail?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -238,15 +251,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ConfirmEmailInvalidTokenTest()
+    public void ConfirmEmailInvalidTokenTest()
     {
         var email = "nameee@gmail.com";
         var token = "11111111-0000-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/confirmemail?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -254,15 +267,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ConfirmEmailValidationErrorTest()
+    public void ConfirmEmailValidationErrorTest()
     {
         var email = "namhgvjhbail.com";
         var token = "11111111-2222-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/confirmemail?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -270,15 +283,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task GetResetPasswordValidTest()
+    public void GetResetPasswordValidTest()
     {
         var email = "nameee@gmail.com";
         var token = "11111111-2222-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/resetpassword?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var resetDto = JsonSerializer.Deserialize<ResetPasswordDto>(responseString);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -286,15 +299,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task GetResetPasswordValidationErrorTest()
+    public void GetResetPasswordValidationErrorTest()
     {
         var email = "namhgvjhbail.com";
         var token = "11111111-2222-3333-4444-555555555555";
 
         var request = new HttpRequestMessage(HttpMethod.Get, $"api/auth/resetpassword?email={email}&token={token}");
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -302,36 +315,32 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ResetPasswordPostValidTest()
+    public void ResetPasswordPostValidTest()
     {
-        using var scope = new CustomFactory<Program>().Services.CreateScope();
-        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-        SeedData.PopulateTestData(appContext);
-
         ResetPasswordDto resetDto = new("john@gmail.com", "newpassword", "11111111-1111-1111-1111-111111111111");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/resetpassword/");
         request.Content = JsonContent.Create(resetDto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("Password has been successfully changed.", responseString);
 
-        SeedData.PopulateTestData(appContext);
+        SeedData.ResetData();
     }
 
     [Fact]
-    public async Task ResetPasswordPostNotExistingTest()
+    public void ResetPasswordPostNotExistingTest()
     {
         ResetPasswordDto resetDto = new("johhhhhhn@gmail.com", "newpassword", "11111111-2222-3333-4444-555555555555");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/resetpassword/");
         request.Content = JsonContent.Create(resetDto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -339,15 +348,15 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ResetPasswordInvalidTokenTest()
+    public void ResetPasswordInvalidTokenTest()
     {
         ResetPasswordDto resetDto = new("john@gmail.com", "newpassword", "11111111-0000-3333-4444-555555555555");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/resetpassword/");
         request.Content = JsonContent.Create(resetDto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -355,21 +364,17 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ResetPasswordTimeOutTest()
+    public void ResetPasswordTimeOutTest()
     {
-        using var scope = new CustomFactory<Program>().Services.CreateScope();
-        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-        SeedData.PopulateTestData(appContext);
-
         ResetPasswordDto resetDto = new("john@gmail.com", "newpassword", "11111111-1111-1111-1111-111111111111");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/resetpassword/");
         request.Content = JsonContent.Create(resetDto);
-        
-        await Task.Delay(5000);
-        var response = await _client.SendAsync(request);
-        
-        var responseString = await response.Content.ReadAsStringAsync();
+
+        Thread.Sleep(5000);
+        var response = _client.SendAsync(request).Result;
+
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -377,19 +382,18 @@ public class AuthControllerTests : IClassFixture<CustomFactory<Program>>
     }
 
     [Fact]
-    public async Task ResetPasswordValidationErrorTest()
+    public void ResetPasswordValidationErrorTest()
     {
         ResetPasswordDto resetDto = new("jfhgjail.com", "newpassword", "11111111-2222-3333-4444-555555555555");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "api/auth/resetpassword/");
         request.Content = JsonContent.Create(resetDto);
 
-        var response = await _client.SendAsync(request);
-        var responseString = await response.Content.ReadAsStringAsync();
+        var response = _client.SendAsync(request).Result;
+        var responseString = response.Content.ReadAsStringAsync().Result;
         var details = JsonSerializer.Deserialize<ProblemDetails>(responseString);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("{\"Email\":[\"'Email' is not a valid email address.\"]}", details.Extensions.Last().Value.ToString());
     }
-
 }

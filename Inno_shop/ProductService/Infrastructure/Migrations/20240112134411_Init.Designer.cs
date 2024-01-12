@@ -12,7 +12,7 @@ using ProductService.Infrastructure.Contexts;
 namespace ProductService.Migrations
 {
     [DbContext(typeof(ProductDbContext))]
-    [Migration("20240110154813_Init")]
+    [Migration("20240112134411_Init")]
     partial class Init
     {
         /// <inheritdoc />

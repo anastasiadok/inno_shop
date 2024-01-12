@@ -1,10 +1,19 @@
-﻿using ProductService.Domain.Entities;
+﻿using Microsoft.Extensions.DependencyInjection;
+using ProductService;
+using ProductService.Domain.Entities;
 using ProductService.Infrastructure.Contexts;
 
 namespace ProductServiceTests.IntegrationTests.Helpers;
 
 public static class SeedData
 {
+    public static void ResetData()
+    {
+        using var scope = new CustomFactory<Program>().Services.CreateScope();
+        using var appContext = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
+        PopulateTestData(appContext);
+    }
+
     public static void PopulateTestData(ProductDbContext dbContext)
     {
         dbContext.Products.RemoveRange(dbContext.Products.ToList());

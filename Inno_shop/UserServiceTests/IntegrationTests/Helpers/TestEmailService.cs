@@ -8,10 +8,9 @@ using UserService.Infrastructure.Interfaces;
 
 namespace UserServiceTests.IntegrationTests.Helpers;
 
-public class TestEmailService:IEmailService
+public class TestEmailService : IEmailService
 {
-    private readonly IUserRepository _repository
-        ;
+    private readonly IUserRepository _repository;
     private readonly IConfiguration _config;
 
     public TestEmailService(IUserRepository repository, IConfiguration configuration)
@@ -50,7 +49,6 @@ public class TestEmailService:IEmailService
         {
             await client.ConnectAsync(_config["Email:SmtpServer"], Convert.ToInt32(_config["Email:Port"]), Convert.ToBoolean(_config["Email:UseSSL"]));
             await client.AuthenticateAsync(_config["Email:Username"], _config["Email:Password"]);
-            //var res1 = await client.SendAsync(emailMessage);
         }
         catch
         {

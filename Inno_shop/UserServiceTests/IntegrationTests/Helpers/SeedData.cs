@@ -1,4 +1,6 @@
-﻿using UserService.Application.Services;
+﻿using Microsoft.Extensions.DependencyInjection;
+using UserService;
+using UserService.Application.Services;
 using UserService.Domain.Entities;
 using UserService.Infrastructure.Contexts;
 
@@ -6,6 +8,13 @@ namespace UserServiceTests.IntegrationTests.Helpers;
 
 public static class SeedData
 {
+    public static void ResetData()
+    {
+        using var scope = new CustomFactory<Program>().Services.CreateScope();
+        using var appContext = scope.ServiceProvider.GetRequiredService<UserDbContext>();
+        PopulateTestData(appContext);
+    }
+    
     public static void PopulateTestData(UserDbContext dbContext)
     {
         dbContext.Users.RemoveRange(dbContext.Users.ToList());
